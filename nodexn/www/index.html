@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXN Executor</title>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="theme-toggle">
+        <svg class="theme-toggle-icon sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <div class="theme-toggle-switch" id="themeToggle"></div>
+        <svg class="theme-toggle-icon moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+    </div>
+    
+    <div class="container">
+        <br>
+        <br>
+        <h1>Executar e Converter EXN</h1>
+
+        <div class="card">
+            <div class="card-content">
+                <h3>Executar EXN</h3>
+                <div class="file-input-container">
+                    <div class="file-input-wrapper">
+                        <label class="file-input-label">
+                            <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                <polyline points="13 2 13 9 20 9"></polyline>
+                            </svg>
+                            Selecionar arquivo EXN
+                            <input type="file" id="exnFile" accept=".exn" class="file-input">
+                        </label>
+                    </div>
+                    <div id="exnFileName" class="file-name">Nenhum arquivo selecionado</div>
+                </div>
+                <div class="actions">
+                    <button id="executeButton" class="button" onclick="executeExn()">
+                        <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Executar
+                    </button>
+                </div>
+                <div class="output-container">
+                    <div id="loadingExn" class="loading hidden">
+                        <div></div><div></div><div></div><div></div>
+                    </div>
+                    <pre id="output"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="card">
+            <div class="card-content">
+                <h3>Converter arquivos JS para EXN</h3>
+                <div class="file-input-container">
+                    <div class="file-input-wrapper">
+                        <label class="file-input-label">
+                            <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Selecionar pasta com arquivos JS
+                            <input type="file" id="jsFile" multiple webkitdirectory directory accept=".js" class="file-input">
+                        </label>
+                    </div>
+                    <div id="jsFileCount" class="file-name">Nenhum arquivo selecionado</div>
+                </div>
+                <div class="actions">
+                    <button id="convertButton" class="button" onclick="convertToExn()">
+                        <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Converter e Baixar EXN
+                    </button>
+                </div>
+                <div class="output-container">
+                    <div id="loadingConvert" class="loading hidden">
+                        <div></div><div></div><div></div><div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/index.js"></script>
+</body>
+</html>

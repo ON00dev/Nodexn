@@ -1,0 +1,12 @@
+{
+  "name": "nodexn",
+  "version": "1.0.0",
+  "description": "Nodexn application",
+  "main": "www/index.html",
+  "scripts": {
+    "start": "node www/api/api.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
