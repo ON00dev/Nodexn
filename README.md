@@ -1,4 +1,4 @@
-# Nodexn - Aplicativo Executável para Projetos Node.js
+# Nodexn - Aplicativo de Conversão e Execução de Projetos Node.js para .EXN
 
 ## 🌟 Visão Geral
 O Nodexn é um aplicativo pronto para uso que permite converter e executar projetos Node.js em um ambiente isolado, sem necessidade de instalação ou configuração prévia.
