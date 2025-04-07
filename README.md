@@ -119,7 +119,7 @@ plugins.register('meu-plugin', {
    - Converta para .exn
    - Compartilhe o único arquivo gerado
 
-## 📌 Regras de Permissões
+## 📑 Regras de Permissões
 
 1. **Herança**:
    - Se um módulo requer `"full_network"`, ele automaticamente inclui `"network"`
