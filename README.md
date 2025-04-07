@@ -128,13 +128,15 @@ plugins.register('meu-plugin', {
    - Módulos como `sqlite3` precisam de múltiplas permissões (`"filesystem"` + `"native"`)
 
 3. **Erros Comuns**:
+   
    Exemplo:
    ```bash
    # Erro típico se faltar permissão
    PermissionDenied: Module 'fs' requires 'filesystem' permission
    ```
 
-4. **Boas Práticas**:
+5. **Boas Práticas**:
+   
    Exemplo:
    ```json
    // SEMPRE especifique o mínimo necessário
