@@ -91,6 +91,7 @@ Edite o `package.json` do seu projeto para definir permissões:
 | `"environment"`      | `process.env`             | Variáveis de ambiente      |
 | `"clipboard"`        | Pacotes de clipboard      | Acesso à área de transferência |
 | `"timers"`           | `setInterval`, `cron`     | Operações agendadas        |
+
 Veja sobre boas práticas e recomendações de permissões em [Regras de Permissões](#-regras-de-permissões)
 
 ## Plugins
