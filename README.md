@@ -55,8 +55,45 @@ Edite o `package.json` do seu projeto para definir permissões:
   ]
 }
 ```
+## Mapeamento de Permissões por Módulo
 
-### Plugins
+### Módulos Nativos do Node.js
+
+| Módulo               | Permissão EXN              | Alternativa Restrita       | Descrição                     |
+|----------------------|---------------------------|---------------------------|-------------------------------|
+| `fs`                 | `"filesystem"`            | `"filesystem:read"`       | Acesso completo ao sistema de arquivos |
+| `child_process`      | `"process"`               | -                         | Execução de processos filhos  |
+| `crypto`             | `"crypto"`                | `"crypto:hash"`           | Operações criptográficas      |
+| `http`/`https`       | `"network"`               | `"network:http"`          | Comunicação HTTP(S)           |
+| `net`                | `"full_network"`          | `"network:tcp"`           | Comunicação TCP               |
+| `dgram`              | `"full_network"`          | `"network:udp"`           | Comunicação UDP               |
+| `os`                 | `"system_info"`           | -                         | Informações do sistema        |
+| `cluster`            | `"process"`               | -                         | Criação de clusters           |
+| `readline`           | `"stdio"`                 | -                         | Interface de linha de comando |
+| `worker_threads`     | `"threads"`               | -                         | Threads de trabalho           |
+
+### Módulos de Terceiros Comuns
+
+| Módulo/Pacote        | Permissão EXN              | Observações                |
+|----------------------|---------------------------|----------------------------|
+| `hyperswarm`         | `"full_network"`          | Requer UDP+TCP             |
+| `express`            | `"network"`               | Depende de `http`          |
+| `socket.io`          | `"full_network"`          | Usa WebSockets + polling   |
+| `level`/`leveldb`    | `"filesystem"`            | Acesso a banco de dados    |
+| `sqlite3`            | `"filesystem"`+`"native"` | Requer módulos nativos     |
+| `sharp`              | `"native"`+`"filesystem"` | Processamento de imagens   |
+
+### Permissões Especiais
+
+| Permissão            | Módulos Relacionados       | Escopo                     |
+|----------------------|---------------------------|----------------------------|
+| `"native"`           | Módulos compilados        | `sqlite3`, `bcrypt`, etc.  |
+| `"environment"`      | `process.env`             | Variáveis de ambiente      |
+| `"clipboard"`        | Pacotes de clipboard      | Acesso à área de transferência |
+| `"timers"`           | `setInterval`, `cron`     | Operações agendadas        |
+Veja sobre boas práticas e recomendações de permissões em [Regras de Permissões](#-regras-de-permissões)
+
+## Plugins
 Crie arquivos `.exnplugin.js` para estender funcionalidades:
 ```javascript
 plugins.register('meu-plugin', {
@@ -80,6 +117,31 @@ plugins.register('meu-plugin', {
 3. **Para distribuição**:
    - Converta para .exn
    - Compartilhe o único arquivo gerado
+
+## 📌 Regras de Permissões
+
+1. **Herança**:
+   - Se um módulo requer `"full_network"`, ele automaticamente inclui `"network"`
+   
+2. **Combinações**:
+   - Módulos como `sqlite3` precisam de múltiplas permissões (`"filesystem"` + `"native"`)
+
+3. **Erros Comuns**:
+   Exemplo:
+   ```bash
+   # Erro típico se faltar permissão
+   PermissionDenied: Module 'fs' requires 'filesystem' permission
+   ```
+
+4. **Boas Práticas**:
+   Exemplo:
+   ```json
+   // SEMPRE especifique o mínimo necessário
+   "exnPermissions": [
+     "network:http",     // Apenas HTTP
+     "filesystem:read"   // Apenas leitura
+   ]
+   ```
 
 ## ⚠️ Limitações Conhecidas
 
