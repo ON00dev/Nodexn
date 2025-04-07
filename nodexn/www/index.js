@@ -21,16 +21,57 @@ const loadingConvert = document.getElementById('loadingConvert');
 const output = document.getElementById('output');
 
 exnFileInput.addEventListener('change', updateExnFileName);
-jsFileInput.addEventListener('change', updateJsFileCount);
+jsFileInput.addEventListener('change', function(e) {
+    const result = updateJsFileCount(e);
+    console.log(`Total de arquivos: ${result.count}`);
+    
+    // Se quiser acessar a estrutura de pastas:
+    if (result.folderName) {
+        const fileStructure = {};
+        result.files.forEach(file => {
+            fileStructure[file.webkitRelativePath] = file;
+        });
+        console.log('Estrutura de pastas:', fileStructure);
+    }
+});
 
 function updateExnFileName() {
     exnFileName.textContent = this.files[0]?.name || 'Nenhum arquivo selecionado';
 }
 
-function updateJsFileCount() {
-    jsFileCount.textContent = this.files.length > 0 
-        ? `${this.files.length} arquivo(s) selecionado(s)` 
-        : 'Nenhum arquivo selecionado';
+function updateJsFileCount(event) {
+    const files = Array.from(event.target.files);
+    let count = files.length;
+    let folderName = null;
+
+    // Verifica se foi selecionada uma pasta (possui webkitRelativePath)
+    if (files.length > 0 && files[0].webkitRelativePath) {
+        folderName = files[0].webkitRelativePath.split('/')[0];
+        
+        // Filtra apenas arquivos (ignora pastas vazias se necessário)
+        count = files.filter(file => file.size > 0 || file.name.includes('.')).length;
+        
+        // Atualiza a exibição com o nome da pasta e contagem
+        jsFileCount.textContent = `Pasta "${folderName}" selecionada (${count} arquivos)`;
+        
+        // Adiciona classe para feedback visual (opcional)
+        event.target.classList.add('folder-selected');
+    } else {
+        // Modo de seleção de arquivos individuais
+        jsFileCount.textContent = count > 0 
+            ? `${count} arquivo(s) selecionado(s)` 
+            : 'Nenhum arquivo selecionado';
+        
+        // Remove classe de feedback (opcional)
+        event.target.classList.remove('folder-selected');
+    }
+
+    // Retorna a estrutura de arquivos se necessário para outras funções
+    return {
+        count,
+        folderName,
+        files
+    };
 }
 
 // ===== SISTEMA DE MÓDULOS =====
@@ -268,11 +309,19 @@ async function executeExn() {
     }
 }
 
+function debugFilePaths(files) {
+    console.log("Caminhos completos dos arquivos:");
+    Object.keys(files).forEach(f => {
+        if (f.endsWith('.js')) console.log(`- ${f}`);
+    });
+}
+
+
 // ===== CONVERSÃO PARA EXN =====
 async function convertToExn() {
     const files = jsFileInput.files;
     if (files.length === 0) {
-        showNotification('Selecione os arquivos do projeto', 'error');
+        showNotification('Selecione a pasta raiz do projeto', 'error');
         return;
     }
 
@@ -281,59 +330,145 @@ async function convertToExn() {
     try {
         const archive = {
             metadata: {
-                version: "1.0",
-                createdAt: new Date().toISOString()
+                version: "2.0",
+                createdAt: new Date().toISOString(),
+                entryPointNote: "Prioriza index.js ou main.js na raiz"
             },
             files: {}
         };
 
-        let packageJson = null;
-        
-        // Processa todos os arquivos
-        for (const file of files) {
-            const content = await readFileAsText(file);
+        // 1. Processa todos os arquivos
+        await Promise.all(Array.from(files).map(async (file) => {
             const filePath = file.webkitRelativePath || file.name;
-            archive.files[filePath] = content;
+            archive.files[filePath] = await readFileAsText(file);
+        }));
 
-            if (file.name === 'package.json') {
-                packageJson = JSON.parse(content);
+        // Debug: mostra os arquivos .js encontrados
+        console.log("Arquivos encontrados:", Object.keys(archive.files).filter(f => f.endsWith('.js')));
+
+        // 2. Processa package.json
+        let packageJson = null;
+        if (archive.files['package.json']) {
+            try {
+                packageJson = JSON.parse(archive.files['package.json']);
                 archive.metadata.name = packageJson.name || 'unnamed-project';
                 archive.metadata.version = packageJson.version || '1.0.0';
                 archive.metadata.type = packageJson.type || 'commonjs';
-                
-                if (packageJson.main) {
-                    archive.metadata.entryPoint = packageJson.main;
+            } catch (e) {
+                console.warn('Package.json inválido', e);
+            }
+        }
+
+        // 3. Função para normalizar caminhos (remove prefixo da pasta raiz)
+        const normalizePath = (path) => {
+            const parts = path.split('/');
+            return parts.slice(1).join('/'); // Remove primeiro componente
+        };
+
+        // 4. Determina o ponto de entrada
+        archive.metadata.entryPoint = (() => {
+            // Opção 1: Arquivos prioritários na raiz
+            const rootPriority = ['index.js', 'main.js'];
+            for (const entry of rootPriority) {
+                const fullPath = Object.keys(archive.files).find(f => 
+                    normalizePath(f) === entry
+                );
+                if (fullPath) {
+                    console.log(`Entrada encontrada por prioridade na raiz: ${fullPath}`);
+                    return fullPath;
                 }
             }
-        }
 
-        if (!packageJson) {
-            throw new Error('O projeto deve conter um package.json');
-        }
+            // Opção 2: main do package.json
+            if (packageJson?.main) {
+                const mainPaths = [
+                    packageJson.main,
+                    packageJson.main.replace(/^\.?\//, ''),
+                    `src/${packageJson.main.replace(/^\.?\//, '')}`
+                ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicatas
 
-        if (!archive.metadata.entryPoint) {
-            if (archive.files['index.js']) {
-                archive.metadata.entryPoint = 'index.js';
-            } else if (archive.files['main.js']) {
-                archive.metadata.entryPoint = 'main.js';
-            } else {
-                throw new Error('Nenhum ponto de entrada encontrado (main.js ou index.js)');
+                for (const path of mainPaths) {
+                    const fullPath = Object.keys(archive.files).find(f => 
+                        normalizePath(f) === path
+                    );
+                    if (fullPath) {
+                        console.log(`Entrada encontrada via package.json main (${path}): ${fullPath}`);
+                        return fullPath;
+                    }
+                }
             }
+
+            // Opção 3: Fallback para outros arquivos comuns
+            const fallbackEntries = [
+                'run.js', 'app.js', 'server.js',
+                'src/index.js', 'src/main.js', 'src/run.js'
+            ];
+            
+            for (const entry of fallbackEntries) {
+                const fullPath = Object.keys(archive.files).find(f => 
+                    normalizePath(f) === entry
+                );
+                if (fullPath) {
+                    console.log(`Entrada encontrada via fallback (${entry}): ${fullPath}`);
+                    return fullPath;
+                }
+            }
+
+            // Se não encontrou, mostra erro detalhado
+            const availableFiles = Object.keys(archive.files)
+                .filter(f => f.endsWith('.js'))
+                .map(normalizePath)
+                .map(f => `• ${f}`)
+                .join('\n');
+
+            throw new Error(
+                `Nenhum ponto de entrada válido encontrado!\n\n` +
+                `Verifique se:\n` +
+                `1. Existe um 'index.js' ou 'main.js' na raiz\n` +
+                `2. Ou especifique no package.json: "main": "caminho/do/arquivo.js"\n\n` +
+                `Arquivos .js disponíveis:\n${availableFiles || 'Nenhum encontrado'}`
+            );
+        })();
+
+        // 5. Validação final
+        if (!archive.files[archive.metadata.entryPoint]) {
+            throw new Error(
+                `Erro crítico: Arquivo de entrada '${archive.metadata.entryPoint}' ` +
+                `não encontrado nos arquivos convertidos!`
+            );
         }
 
-        // Cria e faz download do arquivo .exn
-        downloadFile(
-            `${archive.metadata.name || 'project'}.exn`,
-            JSON.stringify(archive, null, 2)
-        );
+        // 6. Gera o arquivo .exn
+        const blob = new Blob([JSON.stringify(archive, null, 2)], { 
+            type: 'application/json' 
+        });
+        const url = URL.createObjectURL(blob);
         
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${archive.metadata.name || 'project'}.exn`;
+        a.click();
+        
+        URL.revokeObjectURL(url);
         showNotification('Conversão concluída!', 'success');
+
     } catch (error) {
-        outputLog([`Erro: ${error.message}`], 'error');
-        showNotification('Falha na conversão', 'error');
+        console.error('Erro na conversão:', error);
+        outputLog([error.message], 'error');
+        showNotification('Erro na conversão', 'error');
     } finally {
         loadingConvert.classList.add('hidden');
     }
+}
+
+// Função auxiliar para ler arquivos
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = () => reject(new Error(`Falha ao ler ${file.name}`));
+        reader.readAsText(file);
+    });
 }
 
 // ===== FUNÇÕES UTILITÁRIAS =====
