@@ -5,7 +5,7 @@ O Nodexn é um aplicativo pronto para uso que permite converter e executar proje
 
 ## 📥 Como Obter
 1. **Download**:
-   - Baixe o apk mais recente na [página de releases](#) (https://github.com)
+   - Baixe o apk mais recente na [página de releases](link da releases)
 
 2. **Execução**:
    - Abra o app `Nodexn`
