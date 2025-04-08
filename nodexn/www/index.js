@@ -14,7 +14,7 @@ themeToggle.addEventListener('click', () => {
 // ===== CONEXAO AO SERVIDOR =====
 let exnContent = null;
 let exnFilename = null;
-const SERVER_URL = 'https://nodexn-server.vercel.app/'; // Replace with your server URL
+const SERVER_URL = 'https://nodexn-server-nodexn-server.up.railway.app'; // Replace with your server URL
 
 // ===== CONTROLE DE ARQUIVOS =====
 const exnFileInput = document.getElementById('exnFile');
@@ -280,29 +280,51 @@ function detectEntryPoint(files) {
 // ===== ATUALIZAÇÃO NA FUNÇÃO executeExn =====
 async function executeExn() {
     if (!exnContent) {
-        alert('Nenhum arquivo EXN carregado.');
+        showNotification('Nenhum arquivo EXN carregado.', 'error');
         return;
     }
 
+    const loadingElement = document.getElementById('loadingExn');
+    const outputElement = document.getElementById('output');
+    
     try {
-        document.getElementById('output').textContent = 'Executando...';
+        loadingElement.classList.remove('hidden');
+        outputElement.textContent = 'Iniciando execução...';
 
-        const response = await fetch(`${SERVER_URL}/run`, {
+        // Criar FormData com o arquivo EXN
+        const formData = new FormData();
+        const blob = new Blob([exnContent], { type: 'application/json' });
+        formData.append('file', blob, exnFilename || 'project.exn');
+
+        const response = await fetch(`${SERVER_URL}/execute`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exn: exnContent })
+            body: formData
         });
 
         if (!response.ok) {
-            throw new Error('Falha ao executar o EXN no servidor.');
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
         }
 
-        const result = await response.json();
-        document.getElementById('output').textContent = result.output;
+        // Processar a resposta em tempo real
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        outputElement.textContent = '';
+
+        while (true) {
+            const {value, done} = await reader.read();
+            if (done) break;
+            
+            const text = decoder.decode(value, {stream: true});
+            outputElement.textContent += text;
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
 
     } catch (error) {
-        console.error(error);
-        document.getElementById('output').textContent = 'Erro: ' + error.message;
+        console.error('Erro na execução:', error);
+        outputElement.textContent = `Erro: ${error.message}`;
+        showNotification('Falha na execução do arquivo EXN', 'error');
+    } finally {
+        loadingElement.classList.add('hidden');
     }
 }
 
@@ -454,6 +476,19 @@ function readFileAsText(file) {
 }
 
 // ===== FUNÇÕES UTILITÁRIAS =====
+exnFileInput.addEventListener('change', async function() {
+    try {
+        const file = this.files[0];
+        if (file) {
+            exnContent = await readFileAsText(file);
+            exnFilename = file.name;
+            showNotification('Arquivo EXN carregado com sucesso!', 'success');
+        }
+    } catch (error) {
+        console.error('Erro ao ler arquivo:', error);
+        showNotification('Erro ao carregar arquivo EXN', 'error');
+    }
+});
 function readFileAsText(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
