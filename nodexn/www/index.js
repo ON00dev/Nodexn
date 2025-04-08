@@ -179,80 +179,97 @@ function outputLog(args, type) {
 
 // ===== DETECÇÃO DO PONTO DE ENTRADA =====
 function detectEntryPoint(files) {
-    // Ordem de prioridade para detecção
-    const entryPoints = [
-        'main.js',
-        'index.js',
-        'run.js',
-        'app.js',
-        'server.js',
-        'start.js',
-        'src/main.js',
-        'src/index.js',
-        'src/run.js',
-        'src/app.js',
-        'src/server.js',
-        'src/start.js',
-        'dist/main.js',
-        'dist/index.js',
-        'dist/run.js',
-        'dist/app.js',
-        'dist/server.js',
-        'dist/start.js'
-    ];
+    // 1. Filtra apenas arquivos relevantes (ignora node_modules e não-JS)
+    const projectFiles = Object.keys(files).filter(file => {
+        return !file.includes('node_modules/') && 
+               file.endsWith('.js') && 
+               !file.startsWith('.');
+    });
 
-    // Verifica primeiro no package.json (se existir)
+    // Debug: mostra arquivos considerados
+    console.log("Arquivos do projeto considerados:", projectFiles);
+
+    // 2. Verifica package.json primeiro (se existir)
     if (files['package.json']) {
         try {
             const pkg = JSON.parse(files['package.json']);
             
-            // 1. Verifica o campo 'main'
-            if (pkg.main && files[pkg.main]) {
-                return pkg.main;
-            }
-            
-            // 2. Verifica o campo 'bin' (para aplicações CLI)
-            if (pkg.bin) {
-                const binEntry = typeof pkg.bin === 'string' 
-                    ? pkg.bin 
-                    : Object.values(pkg.bin)[0];
-                if (files[binEntry]) {
-                    return binEntry;
+            // Verifica o campo 'main' com várias variações de caminho
+            if (pkg.main) {
+                const possibleMainPaths = [
+                    pkg.main,
+                    pkg.main.startsWith('./') ? pkg.main : `./${pkg.main}`,
+                    pkg.main.startsWith('src/') ? pkg.main : `src/${pkg.main}`,
+                    pkg.main.replace(/^\.?\//, '')
+                ].filter((v, i, a) => a.indexOf(v) === i);
+
+                for (const path of possibleMainPaths) {
+                    const normalizedPath = path.replace(/^\.?\//, '');
+                    if (projectFiles.includes(normalizedPath)) {
+                        console.log(`Ponto de entrada encontrado via package.json: ${normalizedPath}`);
+                        return normalizedPath;
+                    }
                 }
-            }
-            
-            // 3. Verifica scripts de start (analisa o package.json)
-            if (pkg.scripts && pkg.scripts.start) {
-                const startScript = pkg.scripts.start;
-                // Extrai o nome do arquivo de comandos como "node server.js"
-                const scriptFile = startScript.split(' ').find(part => 
-                    part.endsWith('.js') && files[part]
+                
+                // Se especificado mas não encontrado, mostra erro detalhado
+                throw new Error(
+                    `O arquivo especificado no package.json ("main": "${pkg.main}") não foi encontrado.\n` +
+                    `Caminhos testados:\n${possibleMainPaths.map(p => `• ${p}`).join('\n')}\n\n` +
+                    `Arquivos disponíveis:\n${projectFiles.map(f => `• ${f}`).join('\n')}`
                 );
-                if (scriptFile) return scriptFile;
             }
         } catch (e) {
-            console.error('Erro ao analisar package.json', e);
+            console.error('Erro ao analisar package.json:', e);
+            // Continua para outros métodos se houver erro no package.json
         }
     }
 
-    // Verifica os padrões comuns
-    for (const entry of entryPoints) {
-        if (files[entry]) {
+    // 3. Lista priorizada de pontos de entrada (apenas na raiz ou src/)
+    const priorityEntries = [
+        'index.js',
+        'main.js',
+        'app.js',
+        'server.js',
+        'src/index.js',
+        'src/main.js',
+        'src/app.js',
+        'src/server.js',
+        'src/run.js'  // Adicionado especificamente para seu caso
+    ];
+
+    for (const entry of priorityEntries) {
+        if (projectFiles.includes(entry)) {
+            console.log(`Ponto de entrada encontrado por prioridade: ${entry}`);
             return entry;
         }
     }
 
-    // Tenta encontrar qualquer arquivo .js na raiz
-    const rootJsFiles = Object.keys(files).filter(file => 
-        file.split('/').length === 1 && file.endsWith('.js')
+    // 4. Fallback: qualquer arquivo .js em src/ (exceto testes)
+    const srcFiles = projectFiles.filter(file => 
+        file.startsWith('src/') && 
+        !file.includes('.test.') && 
+        !file.includes('spec.js')
     );
-    
-    if (rootJsFiles.length === 1) {
-        return rootJsFiles[0];
+
+    if (srcFiles.length === 1) {
+        console.log(`Ponto de entrada fallback (único arquivo em src/): ${srcFiles[0]}`);
+        return srcFiles[0];
     }
 
-    throw new Error('Não foi possível determinar o ponto de entrada. Possíveis candidatos: ' +
-        entryPoints.join(', ') + ' ou especifique no package.json');
+    // 5. Se nada encontrado, gera erro detalhado
+    const availableFiles = projectFiles
+        .map(f => `• ${f}`)
+        .join('\n');
+
+    throw new Error(
+        `Não foi possível determinar o ponto de entrada automaticamente.\n\n` +
+        `Arquivos JavaScript disponíveis no projeto:\n${availableFiles || 'Nenhum arquivo .js encontrado'}\n\n` +
+        `Soluções:\n` +
+        `1. Crie um index.js ou main.js na raiz do projeto\n` +
+        `2. Especifique o campo "main" no package.json (ex: "main": "src/run.js")\n` +
+        `3. Renomeie seu arquivo principal para um dos nomes padrão\n` +
+        `4. Certifique-se de selecionar a pasta raiz do projeto (contendo package.json)`
+    );
 }
 
 // ===== ATUALIZAÇÃO NA FUNÇÃO executeExn =====
@@ -309,11 +326,20 @@ async function executeExn() {
     }
 }
 
-function debugFilePaths(files) {
-    console.log("Caminhos completos dos arquivos:");
-    Object.keys(files).forEach(f => {
-        if (f.endsWith('.js')) console.log(`- ${f}`);
+function debugFileStructure(files) {
+    console.groupCollapsed('Estrutura completa de arquivos');
+    Object.keys(files).forEach(file => {
+        console.log(file);
     });
+    console.groupEnd();
+
+    console.groupCollapsed('Arquivos JavaScript encontrados');
+    Object.keys(files)
+        .filter(f => f.endsWith('.js'))
+        .forEach(file => {
+            console.log(file);
+        });
+    console.groupEnd();
 }
 
 
@@ -331,22 +357,33 @@ async function convertToExn() {
         const archive = {
             metadata: {
                 version: "2.0",
-                createdAt: new Date().toISOString(),
-                entryPointNote: "Prioriza index.js ou main.js na raiz"
+                createdAt: new Date().toISOString()
             },
             files: {}
         };
 
-        // 1. Processa todos os arquivos
-        await Promise.all(Array.from(files).map(async (file) => {
-            const filePath = file.webkitRelativePath || file.name;
-            archive.files[filePath] = await readFileAsText(file);
+        // 1. Processa todos os arquivos e remove o prefixo da pasta raiz
+        const fileEntries = await Promise.all(Array.from(files).map(async (file) => {
+            let path = file.webkitRelativePath || file.name;
+            // Remove o prefixo da pasta raiz (ex: "Raldowork/")
+            if (path.includes('/')) {
+                path = path.split('/').slice(1).join('/');
+            }
+            return {
+                path: path,
+                content: await readFileAsText(file)
+            };
         }));
 
-        // Debug: mostra os arquivos .js encontrados
-        console.log("Arquivos encontrados:", Object.keys(archive.files).filter(f => f.endsWith('.js')));
+        // Preenche archive.files com caminhos normalizados
+        fileEntries.forEach(entry => {
+            archive.files[entry.path] = entry.content;
+        });
 
-        // 2. Processa package.json
+        // DEBUG: Mostra estrutura de arquivos
+        console.log("Arquivos disponíveis:", Object.keys(archive.files));
+
+        // 2. Processa package.json se existir
         let packageJson = null;
         if (archive.files['package.json']) {
             try {
@@ -359,86 +396,51 @@ async function convertToExn() {
             }
         }
 
-        // 3. Função para normalizar caminhos (remove prefixo da pasta raiz)
-        const normalizePath = (path) => {
-            const parts = path.split('/');
-            return parts.slice(1).join('/'); // Remove primeiro componente
-        };
-
-        // 4. Determina o ponto de entrada
+        // 3. Determinação do ponto de entrada - VERSÃO SIMPLIFICADA
         archive.metadata.entryPoint = (() => {
-            // Opção 1: Arquivos prioritários na raiz
-            const rootPriority = ['index.js', 'main.js'];
-            for (const entry of rootPriority) {
-                const fullPath = Object.keys(archive.files).find(f => 
-                    normalizePath(f) === entry
-                );
-                if (fullPath) {
-                    console.log(`Entrada encontrada por prioridade na raiz: ${fullPath}`);
-                    return fullPath;
-                }
-            }
-
-            // Opção 2: main do package.json
+            // Primeiro: usa o campo 'main' do package.json se existir
             if (packageJson?.main) {
-                const mainPaths = [
-                    packageJson.main,
-                    packageJson.main.replace(/^\.?\//, ''),
-                    `src/${packageJson.main.replace(/^\.?\//, '')}`
-                ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicatas
-
-                for (const path of mainPaths) {
-                    const fullPath = Object.keys(archive.files).find(f => 
-                        normalizePath(f) === path
-                    );
-                    if (fullPath) {
-                        console.log(`Entrada encontrada via package.json main (${path}): ${fullPath}`);
-                        return fullPath;
-                    }
+                const mainFile = packageJson.main.replace(/^\.?\//, ''); // Remove ./ se existir
+                if (archive.files[mainFile]) {
+                    console.log(`Entrada encontrada via package.json: ${mainFile}`);
+                    return mainFile;
                 }
             }
 
-            // Opção 3: Fallback para outros arquivos comuns
-            const fallbackEntries = [
-                'run.js', 'app.js', 'server.js',
-                'src/index.js', 'src/main.js', 'src/run.js'
-            ];
-            
-            for (const entry of fallbackEntries) {
-                const fullPath = Object.keys(archive.files).find(f => 
-                    normalizePath(f) === entry
-                );
-                if (fullPath) {
-                    console.log(`Entrada encontrada via fallback (${entry}): ${fullPath}`);
-                    return fullPath;
+            // Segundo: tenta os arquivos padrão na raiz
+            const defaultEntries = ['index.js', 'main.js', 'app.js', 'server.js'];
+            for (const entry of defaultEntries) {
+                if (archive.files[entry]) {
+                    console.log(`Entrada encontrada (padrão raiz): ${entry}`);
+                    return entry;
                 }
             }
 
-            // Se não encontrou, mostra erro detalhado
+            // Se não encontrou, lista os arquivos disponíveis para ajudar no debug
             const availableFiles = Object.keys(archive.files)
-                .filter(f => f.endsWith('.js'))
-                .map(normalizePath)
+                .filter(f => f.endsWith('.js') && !f.includes('node_modules'))
                 .map(f => `• ${f}`)
                 .join('\n');
 
             throw new Error(
-                `Nenhum ponto de entrada válido encontrado!\n\n` +
-                `Verifique se:\n` +
-                `1. Existe um 'index.js' ou 'main.js' na raiz\n` +
-                `2. Ou especifique no package.json: "main": "caminho/do/arquivo.js"\n\n` +
-                `Arquivos .js disponíveis:\n${availableFiles || 'Nenhum encontrado'}`
+                `Nenhum ponto de entrada encontrado!\n\n` +
+                `Arquivos .js disponíveis:\n${availableFiles}\n\n` +
+                `Soluções:\n` +
+                `1. Crie um index.js ou main.js na raiz\n` +
+                `2. Especifique o campo "main" no package.json\n` +
+                `3. Verifique se selecionou a pasta raiz do projeto`
             );
         })();
 
-        // 5. Validação final
+        // 4. Validação final do ponto de entrada
         if (!archive.files[archive.metadata.entryPoint]) {
             throw new Error(
-                `Erro crítico: Arquivo de entrada '${archive.metadata.entryPoint}' ` +
-                `não encontrado nos arquivos convertidos!`
+                `Erro crítico: O arquivo de entrada '${archive.metadata.entryPoint}' ` +
+                `foi selecionado mas não existe nos arquivos!`
             );
         }
 
-        // 6. Gera o arquivo .exn
+        // 5. Gera o arquivo .exn
         const blob = new Blob([JSON.stringify(archive, null, 2)], { 
             type: 'application/json' 
         });
@@ -455,7 +457,7 @@ async function convertToExn() {
     } catch (error) {
         console.error('Erro na conversão:', error);
         outputLog([error.message], 'error');
-        showNotification('Erro na conversão', 'error');
+        showNotification('Erro na conversão: ' + error.message, 'error');
     } finally {
         loadingConvert.classList.add('hidden');
     }
