@@ -46,15 +46,18 @@ O Nodexn é um aplicativo pronto para uso que permite converter e executar proje
 ## ⚙️ Configuração
 
 ### Permissões
-Edite o `package.json` do seu projeto para definir permissões:
+Edite o `package.json` do seu projeto para definir permissões e declarar o tipo de modularização:
 ```json
 {
+   "type": "module",
   "exnPermissions": [
     "filesystem",
     "network"
   ]
 }
 ```
+Em `type` coloque `"module"` para modularização `ES modules`. Ou `"commonjs"` para modularização `CommonJS`.
+
 ## Mapeamento de Permissões por Módulo
 
 ### Módulos Nativos do Node.js
