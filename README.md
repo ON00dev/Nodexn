@@ -49,7 +49,7 @@ O Nodexn é um aplicativo pronto para uso que permite converter e executar proje
 Edite o `package.json` do seu projeto para definir permissões e declarar o tipo de modularização:
 ```json
 {
-   "type": "module",
+  "type": "module",
   "exnPermissions": [
     "filesystem",
     "network"
