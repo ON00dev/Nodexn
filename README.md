@@ -46,7 +46,7 @@ O Nodexn é um aplicativo pronto para uso que permite converter e executar proje
 ## ⚙️ Configuração
 
 ### Permissões
-Edite o `package.json` do seu projeto para definir permissões e declarar o tipo de modularização:
+Edite o `package.json` do seu projeto para definir permissões e declarar o tipo de módulos:
 ```json
 {
   "type": "module",
@@ -56,7 +56,7 @@ Edite o `package.json` do seu projeto para definir permissões e declarar o tipo
   ]
 }
 ```
-Em `type` coloque `"module"` para modularização `ES modules`. Ou `"commonjs"` para modularização `CommonJS`.
+Em `type` coloque `"module"` para módulos `ES modules`. Ou `"commonjs"` para módulos `CommonJS`.
 
 ## Mapeamento de Permissões por Módulo
 
