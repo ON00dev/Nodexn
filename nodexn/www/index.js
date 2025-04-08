@@ -11,6 +11,11 @@ themeToggle.addEventListener('click', () => {
     localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
 });
 
+// ===== CONEXAO AO SERVIDOR =====
+let exnContent = null;
+let exnFilename = null;
+const SERVER_URL = 'https://nodexn-server.vercel.app/'; // Replace with your server URL
+
 // ===== CONTROLE DE ARQUIVOS =====
 const exnFileInput = document.getElementById('exnFile');
 const exnFileName = document.getElementById('exnFileName');
@@ -274,55 +279,30 @@ function detectEntryPoint(files) {
 
 // ===== ATUALIZAÇÃO NA FUNÇÃO executeExn =====
 async function executeExn() {
-    const file = exnFileInput.files[0];
-    if (!file) {
-        showNotification('Selecione um arquivo EXN', 'error');
+    if (!exnContent) {
+        alert('Nenhum arquivo EXN carregado.');
         return;
     }
 
-    output.innerHTML = '';
-    loadingExn.classList.remove('hidden');
-
     try {
-        const exnData = JSON.parse(await readFileAsText(file));
-        if (!exnData.files || typeof exnData.files !== 'object') {
-            throw new Error('Formato EXN inválido: faltam arquivos');
+        document.getElementById('output').textContent = 'Executando...';
+
+        const response = await fetch(`${SERVER_URL}/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exn: exnContent })
+        });
+
+        if (!response.ok) {
+            throw new Error('Falha ao executar o EXN no servidor.');
         }
 
-        const moduleSystem = new ModuleSystem();
-        const entryPoint = detectEntryPoint(exnData.files);
-        const isESModule = exnData.metadata?.type === 'module' || 
-                          entryPoint.endsWith('.mjs') || 
-                          (exnData.files['package.json'] && 
-                           JSON.parse(exnData.files['package.json']).type === 'module');
+        const result = await response.json();
+        document.getElementById('output').textContent = result.output;
 
-        if (!entryPoint) {
-            throw new Error('Nenhum ponto de entrada detectado');
-        }
-
-        if (!exnData.files[entryPoint]) {
-            throw new Error(`Ponto de entrada '${entryPoint}' não encontrado nos arquivos`);
-        }
-
-        // Carrega todos os arquivos JS no sistema de módulos
-        for (const [path, content] of Object.entries(exnData.files)) {
-            if (path.endsWith('.js') || path.endsWith('.mjs')) {
-                moduleSystem.cache.set(path, {
-                    exports: {},
-                    filename: path,
-                    loaded: false
-                });
-            }
-        }
-
-        // Executa o ponto de entrada
-        await moduleSystem.evaluateModule(entryPoint, exnData.files[entryPoint], isESModule);
-        showNotification('EXN executado com sucesso!', 'success');
     } catch (error) {
-        outputLog([`Erro: ${error.message}`], 'error');
-        showNotification('Falha ao executar EXN', 'error');
-    } finally {
-        loadingExn.classList.add('hidden');
+        console.error(error);
+        document.getElementById('output').textContent = 'Erro: ' + error.message;
     }
 }
 
