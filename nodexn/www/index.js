@@ -14,9 +14,9 @@ themeToggle.addEventListener('click', () => {
 // ===== CONEXAO AO SERVIDOR =====
 let exnContent = null;
 let exnFilename = null;
-const localServer = 'http://localhost:3000';
-const productionServer = 'https://nodexn-server-nodexn-server.up.railway.app/';
-const SERVER_URL = localServer;
+const localServer = 'http://localhost:3000'; // servidor local par testes
+const productionServer = 'https://nodexn-server-nodexn-server.up.railway.app/'; // servidor de produção
+const SERVER_URL = productionServer;
 
 // ===== CONTROLE DE ARQUIVOS =====
 const exnFileInput = document.getElementById('exnFile');
