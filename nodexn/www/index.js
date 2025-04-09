@@ -14,7 +14,9 @@ themeToggle.addEventListener('click', () => {
 // ===== CONEXAO AO SERVIDOR =====
 let exnContent = null;
 let exnFilename = null;
-const SERVER_URL = 'https://nodexn-server-nodexn-server.up.railway.app'; // Replace with your server URL
+const localServer = 'http://localhost:3000';
+const productionServer = 'https://nodexn-server-nodexn-server.up.railway.app/';
+const SERVER_URL = localServer;
 
 // ===== CONTROLE DE ARQUIVOS =====
 const exnFileInput = document.getElementById('exnFile');
@@ -286,12 +288,17 @@ async function executeExn() {
 
     const loadingElement = document.getElementById('loadingExn');
     const outputElement = document.getElementById('output');
-    
+
     try {
         loadingElement.classList.remove('hidden');
         outputElement.textContent = 'Iniciando execução...';
 
-        // Criar FormData com o arquivo EXN
+        try {
+            await fetch(SERVER_URL, { method: 'HEAD' });
+        } catch (error) {
+            throw new Error('Servidor não está acessível. Certifique-se que o servidor está rodando em http://localhost:3000');
+        }
+
         const formData = new FormData();
         const blob = new Blob([exnContent], { type: 'application/json' });
         formData.append('file', blob, exnFilename || 'project.exn');
@@ -302,31 +309,27 @@ async function executeExn() {
         });
 
         if (!response.ok) {
-            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(errorText || `Erro ${response.status}: ${response.statusText}`);
         }
 
-        // Processar a resposta em tempo real
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        outputElement.textContent = '';
+        const result = await response.text();  // ✅ Recebe texto
+        outputElement.innerHTML = '';
+        const preElement = document.createElement('pre');
+        preElement.textContent = result;
+        outputElement.appendChild(preElement);
 
-        while (true) {
-            const {value, done} = await reader.read();
-            if (done) break;
-            
-            const text = decoder.decode(value, {stream: true});
-            outputElement.textContent += text;
-            outputElement.scrollTop = outputElement.scrollHeight;
-        }
+        showNotification('Arquivo EXN executado com sucesso!', 'success');
 
     } catch (error) {
         console.error('Erro na execução:', error);
         outputElement.textContent = `Erro: ${error.message}`;
-        showNotification('Falha na execução do arquivo EXN', 'error');
+        showNotification(error.message, 'error');
     } finally {
         loadingElement.classList.add('hidden');
     }
 }
+
 
 function debugFileStructure(files) {
     console.groupCollapsed('Estrutura completa de arquivos');
@@ -352,6 +355,10 @@ async function convertToExn() {
         showNotification('Selecione a pasta raiz do projeto', 'error');
         return;
     }
+
+    // Adiciona logs de depuração no início da conversão
+    console.log('[DEBUG] Iniciando conversão para EXN...');
+    console.log('[DEBUG] Total de arquivos selecionados:', files.length);
 
     loadingConvert.classList.remove('hidden');
 
@@ -382,20 +389,31 @@ async function convertToExn() {
             archive.files[entry.path] = entry.content;
         });
 
-        // DEBUG: Mostra estrutura de arquivos
-        console.log("Arquivos disponíveis:", Object.keys(archive.files));
+        // DEBUG: Mostra estrutura de arquivos detalhada
+        console.log('[DEBUG] Estrutura de arquivos processada:');
+        console.log('[DEBUG] Total de arquivos:', Object.keys(archive.files).length);
+        console.log('[DEBUG] Arquivos encontrados:', Object.keys(archive.files));
 
         // 2. Processa package.json se existir
         let packageJson = null;
         if (archive.files['package.json']) {
+            console.log('[DEBUG] package.json encontrado, processando...');
             try {
                 packageJson = JSON.parse(archive.files['package.json']);
+                console.log('[DEBUG] Dados do package.json:', {
+                    name: packageJson.name,
+                    version: packageJson.version,
+                    type: packageJson.type,
+                    main: packageJson.main
+                });
                 archive.metadata.name = packageJson.name || 'unnamed-project';
                 archive.metadata.version = packageJson.version || '1.0.0';
                 archive.metadata.type = packageJson.type || 'commonjs';
             } catch (e) {
-                console.warn('Package.json inválido', e);
+                console.warn('[DEBUG] Erro ao processar package.json:', e);
             }
+        } else {
+            console.log('[DEBUG] package.json não encontrado');
         }
 
         // 3. Determinação do ponto de entrada - VERSÃO SIMPLIFICADA
@@ -544,5 +562,5 @@ function showNotification(message, type = 'info') {
 }
 
 // ===== VINCULA EVENTOS =====
-document.getElementById('executeExnBtn').addEventListener('click', executeExn);
-document.getElementById('convertToExnBtn').addEventListener('click', convertToExn);
+document.getElementById('executeButton').addEventListener('click', executeExn);
+document.getElementById('convertButton').addEventListener('click', convertToExn);
