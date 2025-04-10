@@ -192,5 +192,4 @@ A ideia foi **simplesmente brilhante** e a execução ficou **sensacional**!
 
 **Que venham ainda mais ideias épicas!**  
 Estamos animados para ver os próximos capítulos dessa jornada. 🚀✨
-
-# Orgulho define! 🙌
+### Orgulho Define! 🙌
