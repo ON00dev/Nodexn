@@ -178,3 +178,19 @@ Para ajuda adicional:
 ---
 
 📌 **Nota**: Este é um aplicativo autônomo - não requer Node.js instalado nem acesso à internet para funcionar!
+
+---
+# Créditos
+## 🎉 Parabéns pelo Projeto! 🚀
+
+Quero deixar registrado **meu sinceros parabéns** pela ideia incrível desse projeto!  
+A ideia foi **simplesmente brilhante** e a execução ficou **sensacional**!
+
+> 💡 **Créditos especiais**: Toda a inspiração e visão por trás dessa iniciativa incrível vem de **[Ravy NS](https://github.com/Dogshihtzuamora)**.  
+> Sem dúvidas, a mente criativa que tornou tudo isso possível! 👏🔥
+---
+
+**Que venham ainda mais ideias épicas!**  
+Estamos animados para ver os próximos capítulos dessa jornada. 🚀✨
+
+# Orgulho define! 🙌
