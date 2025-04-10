@@ -177,7 +177,7 @@ Para ajuda adicional:
 
 ---
 
-📌 **Nota**: Este é um aplicativo autônomo - não requer Node.js instalado nem acesso à internet para funcionar!
+📌 **Nota**: Este é um aplicativo autônomo - não requer Node.js instalado mas requer acesso à internet para funcionar!
 
 ---
 # Créditos
