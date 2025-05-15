@@ -190,6 +190,4 @@ A ideia foi **simplesmente brilhante** e a execução ficou **sensacional**!
 > Sem dúvidas, a mente criativa que tornou tudo isso possível! 👏🔥
 ---
 
-**Que venham ainda mais ideias épicas!**  
-Estamos animados para ver os próximos capítulos dessa jornada. 🚀✨
-### Orgulho Define! 🙌
+**Que venham ainda mais ideias épicas!** 
