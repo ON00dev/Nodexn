@@ -1,7 +1,7 @@
 # Nodexn - Aplicativo de Conversão e Execução de Projetos Node.js para .EXN
 
 ## 🌟 Visão Geral
-O Nodexn é um aplicativo pronto para uso que permite converter e executar projetos Node.js CLI em um ambiente isolado, sem necessidade de instalação ou configuração prévia.
+O Nodexn é um aplicativo pronto para uso que permite converter e executar projetos Node.js CLI em um ambiente isolado, sem necessidade de instalação de outras ferramentas.
 
 ## 📥 Como Obter
 1. **Download**:
